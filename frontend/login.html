@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCMXpertLite | Login & Signup</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Login Form (default visible) -->
+    <div class="form-box active" id="login-box">
+      <div class="form-content">
+        <h2>Login</h2>
+        <form id="loginForm">
+          <div class="input-group">
+            <input type="email" id="loginEmail" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+          </div>
+          <div class="g-recaptcha" data-sitekey="6LexglcrAAAAAKScj84fLQy-O-C37L-z9Osr9rUU"></div>
+          <button type="submit" class="btn">Login</button>
+          <p class="form-footer">Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
+          <p id="loginMessage" class="message"></p>
+        </form>
+      </div>
+    </div>
+
+    <!-- Signup Form (hidden by default) -->
+    <div class="form-box" id="signup-box">
+      <div class="form-content">
+        <h2>Sign Up</h2>
+        <form id="signupForm">
+          <div class="input-group">
+            <input type="text" id="signupName" placeholder="Name" required>
+            <input type="email" id="signupEmail" placeholder="Email" required>
+            <input type="password" id="signupPassword" placeholder="Password" required>
+          </div>
+          <div class="g-recaptcha" data-sitekey="6LexglcrAAAAAKScj84fLQy-O-C37L-z9Osr9rUU"></div>
+          <button type="submit" class="btn">Sign Up</button>
+          <p class="form-footer">Already have an account? <a href="#" id="showLogin">Log in</a></p>
+          <p id="signupMessage" class="message"></p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // DOM Elements
+      const loginBox = document.getElementById('login-box');
+      const signupBox = document.getElementById('signup-box');
+      const showSignupBtn = document.getElementById('showSignup');
+      const showLoginBtn = document.getElementById('showLogin');
+      const loginForm = document.getElementById('loginForm');
+      const signupForm = document.getElementById('signupForm');
+
+      // Toggle between forms
+      showSignupBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        loginBox.classList.remove('active');
+        signupBox.classList.add('active');
+        clearMessage('loginMessage');
+        resetRecaptcha();
+      });
+
+      showLoginBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        signupBox.classList.remove('active');
+        loginBox.classList.add('active');
+        clearMessage('signupMessage');
+        resetRecaptcha();
+      });
+
+      // Form submissions
+      loginForm.addEventListener('submit', handleLogin);
+      signupForm.addEventListener('submit', handleSignup);
+
+      // Helper functions
+      function clearMessage(elementId) {
+        document.getElementById(elementId).textContent = '';
+      }
+
+      function resetRecaptcha() {
+        if (window.grecaptcha) {
+          const recaptchaElements = document.querySelectorAll('.g-recaptcha');
+          recaptchaElements.forEach(el => {
+            const widgetId = grecaptcha.getResponse(el);
+            if (widgetId) {
+              grecaptcha.reset(widgetId);
+            }
+          });
+        }
+      }
+
+      async function handleLogin(e) {
+        e.preventDefault();
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const messageElement = document.getElementById('loginMessage');
+
+        try {
+          const response = await fetch('/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              username: email,
+              password: password
+            })
+          });
+
+          const data = await response.json();
+          
+          if (response.ok) {
+            // Store user data
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('username', data.user?.name || '');
+            localStorage.setItem('email', data.user?.email || '');
+            localStorage.setItem('role', data.user?.role || '');
+            
+            // Redirect to dashboard
+            window.location.href = 'dashboard.html';
+          } else {
+            showMessage(messageElement, data.detail || 'Login failed. Please check your credentials.', 'error');
+          }
+        } catch (error) {
+          console.error('Login error:', error);
+          showMessage(messageElement, 'An error occurred. Please try again later.', 'error');
+        }
+      }
+
+      // 📌 File: your_signup_login.html
+
+async function handleSignup(e) {
+  e.preventDefault();
+  const name = document.getElementById('signupName').value;
+  const email = document.getElementById('signupEmail').value;
+  const password = document.getElementById('signupPassword').value;
+  const messageElement = document.getElementById('signupMessage');
+
+  try {
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('email', email);
+    formData.append('password', password);
+
+    const response = await fetch('/auth/signup', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showMessage(messageElement, 'Signup successful! Please login.', 'success');
+      showLoginBtn.click(); // Switch to login form
+    } else {
+      let errorText = '';
+      if (Array.isArray(data.detail)) {
+        errorText = data.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+      } else {
+        errorText = data.detail || 'Signup failed. Please try again.';
+      }
+      showMessage(messageElement, errorText, 'error');
+    }
+  } catch (error) {
+    console.error('Signup error:', error);
+    showMessage(messageElement, 'An error occurred. Please try again later.', 'error');
+  }
+}
+
+
+      function showMessage(element, text, type) {
+        element.textContent = text;
+        element.className = 'message ' + type;
+      }
+    });
+  </script>
+</body>
+</html>

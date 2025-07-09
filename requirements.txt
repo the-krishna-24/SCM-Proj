@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+kafka-python
+pymongo
+email-validator
+pydantic[email]
+bcrypt
+PyJWT
+requests
+pydantic
+python-multipart
+python-jose
+python-jose[cryptography]
+python-dotenv

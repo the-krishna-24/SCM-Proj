@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SCMXpert Lite | New Shipment</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <style>
+    .shipment-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.05);
+      max-width: 900px;
+      margin: 20px auto;
+      color: #e0e0e0;
+    }
+
+    .shipment-form input,
+    .shipment-form select {
+      padding: 10px;
+      border: 1px solid #555;
+      border-radius: 6px;
+      background: #1f2937;
+      color: #e0e0e0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .shipment-form input::placeholder {
+      color: #aaa;
+    }
+
+    .button-row {
+      grid-column: span 2;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .shipment-form button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+
+    .shipment-form button[type="submit"] {
+      background: var(--primary);
+      color: #111;
+    }
+
+    .shipment-form button[type="submit"]:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+
+    .shipment-form button[type="reset"] {
+      background: transparent;
+      border: 2px solid var(--primary);
+      color: var(--primary);
+    }
+
+    .shipment-form button[type="reset"]:hover {
+      background: rgba(3, 233, 244, 0.05);
+    }
+
+    #shipmentMessage {
+      grid-column: span 2;
+      text-align: center;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+      .shipment-form {
+        grid-template-columns: 1fr;
+      }
+
+      .button-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Dashboard</h2>
+      <ul>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="account.html">My Account</a></li>
+        <li><a href="my_shipment.html">My Shipment</a></li>
+        <li><a href="New_shipment.html">New Shipment</a></li>
+        <li><a href="device.html">Device Data</a></li>
+        <li><a href="admin.html">Admin Tools</a></li>
+      </ul>
+      <a href="#" class="logout" id="logoutBtn">Logout</a>
+    </aside>
+
+    <main class="main-content">
+      <h1>New Shipment</h1>
+      <p>Please fill in all details.</p>
+      <form class="shipment-form" id="newShipmentForm">
+        <input type="text" id="shipmentNumber" placeholder="Shipment Number" required>
+        <input type="text" id="containerNumber" placeholder="Container Number">
+
+        <select id="routeDetails" required>
+          <option value="">Select Route</option>
+          <option value="Chennai">Chennai</option>
+          <option value="Bengaluru">Bengaluru</option>
+          <option value="Mumbai">Mumbai</option>
+          <option value="Delhi">Delhi</option>
+        </select>
+
+        <select id="goodsType" required>
+          <option value="">Select Goods Type</option>
+          <option value="Electronics">Electronics</option>
+          <option value="Furniture">Furniture</option>
+          <option value="Medicine">Medicine</option>
+          <option value="Food">Food</option>
+        </select>
+
+        <select id="device" required>
+          <option value="">Select Device</option>
+          <option value="1152">1152</option>
+          <option value="1153">1153</option>
+          <option value="1154">1154</option>
+        </select>
+
+        <input type="date" id="deliveryDate" required>
+        <input type="text" id="poNumber" placeholder="PO Number">
+        <input type="text" id="deliveryNumber" placeholder="Delivery Number">
+        <input type="text" id="ndcNumber" placeholder="NDC Number">
+        <input type="text" id="batchId" placeholder="Batch ID" required>
+        <input type="text" id="serialNumber" placeholder="Serial No of goods">
+        <input type="text" id="description" placeholder="Shipment Description">
+
+        <div class="button-row">
+          <button type="submit">Create Shipment</button>
+          <button type="reset">Clear Details</button>
+        </div>
+
+        <p id="shipmentMessage"></p>
+      </form>
+    </main>
+  </div>
+
+  <script>
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken) {
+      window.location.href = "login.html";
+    }
+
+    document.getElementById("newShipmentForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const shipmentMessage = document.getElementById("shipmentMessage");
+      shipmentMessage.innerText = "Creating shipment...";
+      shipmentMessage.style.color = "gray";
+
+      const formData = new FormData();
+      formData.append("shipment_number", document.getElementById("shipmentNumber").value);
+      formData.append("route_details", document.getElementById("routeDetails").value);
+      formData.append("device", document.getElementById("device").value);
+      formData.append("goods_type", document.getElementById("goodsType").value);
+      formData.append("delivery_date", document.getElementById("deliveryDate").value);
+      formData.append("batch_id", document.getElementById("batchId").value);
+
+      const optionalFields = ["containerNumber", "poNumber", "deliveryNumber", "ndcNumber", "serialNumber", "description"];
+      optionalFields.forEach(field => {
+        const value = document.getElementById(field).value;
+        if (value) formData.append(field.toLowerCase(), value);
+      });
+
+      try {
+        const response = await fetch("/shipments/create", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${accessToken}` },
+          body: formData
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          shipmentMessage.innerText = "Shipment created successfully!";
+          shipmentMessage.style.color = "limegreen";
+          document.getElementById("newShipmentForm").reset();
+        } else {
+          shipmentMessage.innerText = data.detail || "Failed to create shipment.";
+          shipmentMessage.style.color = "tomato";
+        }
+      } catch (error) {
+        console.error("Error creating shipment:", error);
+        shipmentMessage.innerText = "An error occurred. Please try again.";
+        shipmentMessage.style.color = "tomato";
+      }
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async function(e) {
+      e.preventDefault();
+      try {
+        const response = await fetch("/auth/logout", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${accessToken}` }
+        });
+
+        if (response.ok) {
+          localStorage.clear();
+          window.location.href = "login.html";
+        } else {
+          const data = await response.json();
+          alert(data.detail || "Logout failed.");
+        }
+      } catch (error) {
+        console.error("Logout error:", error);
+        alert("An error occurred during logout.");
+      }
+    });
+  </script>
+</body>
+</html>

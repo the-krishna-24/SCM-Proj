@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SCMXpert Lite Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2><i class="fas fa-chart-line"></i> Dashboard</h2>
+      <ul>
+        <li><a href="dashboard.html" id="dashboardLink"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+        <li><a href="account.html" id="accountLink"><i class="fas fa-user-circle"></i> My Account</a></li>
+        <li><a href="my_shipment.html"><i class="fas fa-box"></i> My Shipment</a></li>
+        <li><a href="New_shipment.html"><i class="fas fa-truck"></i> New Shipment</a></li>
+        <li><a href="device.html"><i class="fas fa-database"></i> Device Data</a></li>
+        <li><a href="admin.html"><i class="fas fa-tools"></i> Admin Tools</a></li>
+      </ul>
+      <a href="#" class="logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </aside>
+
+<main class="main-content" id="mainContent">
+  <h1>Hi <span id="username">User</span>, Welcome to SCMXpert Lite</h1>
+  <div class="actions">
+    <button class="action-btn" onclick="goToShipment()">Create Shipment</button>
+    <button class="action-btn" onclick="goToDeviceData()">Device Data Stream</button>
+  </div>
+</main>
+</div>
+
+<script>
+  // Ensure user is logged in
+  const accessToken = localStorage.getItem("access_token");
+  if (!accessToken) {
+    window.location.href = "login.html"; // Redirect to login if no token
+  }
+
+  // Set username dynamically
+  const username = localStorage.getItem("username") || "User";
+  document.getElementById("username").innerText = username;
+
+  // Functions to navigate
+  function goToShipment() {
+    location.href = "New_shipment.html";
+  }
+
+  function goToDeviceData() {
+    location.href = "device.html";
+  }
+
+  // Logout functionality
+  document.getElementById("logoutBtn").addEventListener("click", async function(e) {
+    e.preventDefault();
+    try {
+      const response = await fetch("/auth/logout", { // Use /auth/logout
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`
+        }
+      });
+
+      if (response.ok) {
+        localStorage.clear(); // Clear all stored user data
+        window.location.href = "login.html"; // Redirect to login page
+      } else {
+        const data = await response.json();
+        alert(data.detail || "Logout failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+      alert("An error occurred during logout.");
+    }
+  });
+
+  // Sidebar links (already navigating directly to HTML files)
+  // No need for showAccount/showDashboard functions if they are separate HTML files.
+  // The links in the sidebar already handle direct navigation.
+</script>
+
+</body>
+</html>

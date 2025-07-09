@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SCMXpertLite - My Shipments</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <style>
+    .shipment-box {
+  background: rgba(99, 102, 241, 0.08);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  background: transparent;
+  color: #1e293b;
+}
+
+th, td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+tr:hover {
+  background: rgba(99, 102, 241, 0.05);
+  transition: background-color 0.2s ease;
+}
+
+tr:nth-child(even) {
+  background: rgba(241, 245, 249, 0.5);
+}
+
+.filter-bar {
+  margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-bar input {
+  flex-grow: 1;
+  padding: 10px;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  color: #1e293b;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-bar input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.filter-bar input::placeholder {
+  color: #64748b;
+}
+
+.filter-bar button {
+  padding: 10px 16px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  color: #ffffff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.filter-bar button:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.filter-bar button:active {
+  transform: translateY(0);
+}
+
+#shipmentMessage {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 0.95rem;
+  color: #64748b;
+  font-style: italic;
+}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <ul>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="account.html">My Account</a></li>
+        <li><a href="my_shipment.html">My Shipment</a></li>
+        <li><a href="New_shipment.html">New Shipment</a></li>
+        <li><a href="device.html">Device Data</a></li>
+        <li><a href="admin.html">Admin Tools</a></li>
+      </ul>
+      <a class="logout" href="#" id="logoutBtn">Logout</a>
+    </aside>
+
+    <main class="main-content">
+      <h1>My Shipments</h1>
+      <div class="filter-bar">
+        <input type="text" id="searchShipment" placeholder="Search by Shipment Number" />
+        <button onclick="filterShipments()">Search</button>
+        <button onclick="loadShipments()">Show All</button>
+      </div>
+
+      <div class="shipment-box">
+        <table id="shipmentTable">
+          <thead>
+            <tr>
+              <th>Shipment Number</th>
+              <th>Route Details</th>
+              <th>Device</th>
+              <th>Goods Type</th>
+              <th>Delivery Date</th>
+              <th>Batch ID</th>
+              <th>Created At</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <p id="shipmentMessage"></p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const accessToken = localStorage.getItem("access_token");
+    if (!accessToken) {
+      window.location.href = "login.html";
+    }
+
+    async function fetchShipments(searchQuery = "") {
+      const tbody = document.querySelector("#shipmentTable tbody");
+      const messageElement = document.getElementById("shipmentMessage");
+      tbody.innerHTML = "";
+      messageElement.innerText = "Loading shipments...";
+
+      let url = "/shipments/all";
+      if (searchQuery) {
+        url = `/shipments/search?shipment_number=${encodeURIComponent(searchQuery)}`;
+      }
+
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const shipments = data.shipments || [];
+
+          if (shipments.length === 0) {
+            messageElement.innerText = "No shipments found.";
+            return;
+          }
+
+          shipments.forEach(ship => {
+            const row = `<tr>
+              <td>${ship.shipment_number || 'N/A'}</td>
+              <td>${ship.route_details || 'N/A'}</td>
+              <td>${ship.device || 'N/A'}</td>
+              <td>${ship.goods_type || 'N/A'}</td>
+              <td>${ship.delivery_date || 'N/A'}</td>
+              <td>${ship.batch_id || 'N/A'}</td>
+              <td>${ship.created_at ? new Date(ship.created_at).toLocaleDateString() : 'N/A'}</td>
+              <td>${ship.status || 'N/A'}</td>
+            </tr>`;
+            tbody.insertAdjacentHTML("beforeend", row);
+          });
+          messageElement.innerText = "";
+        } else {
+          const errorData = await response.json();
+          messageElement.innerText = errorData.detail || "Failed to load shipments.";
+          messageElement.style.color = "tomato";
+        }
+      } catch (error) {
+        console.error("Error fetching shipments:", error);
+        messageElement.innerText = "An error occurred while fetching shipments.";
+        messageElement.style.color = "tomato";
+      }
+    }
+
+    function loadShipments() {
+      fetchShipments();
+    }
+
+    function filterShipments() {
+      const search = document.getElementById("searchShipment").value.trim();
+      fetchShipments(search);
+    }
+
+    document.addEventListener("DOMContentLoaded", loadShipments);
+
+    document.getElementById("logoutBtn").addEventListener("click", async function(e) {
+      e.preventDefault();
+      try {
+        const response = await fetch("/auth/logout", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        if (response.ok) {
+          localStorage.clear();
+          window.location.href = "login.html";
+        } else {
+          const data = await response.json();
+          alert(data.detail || "Logout failed. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error during logout:", error);
+        alert("An error occurred during logout.");
+      }
+    });
+  </script>
+</body>
+</html>

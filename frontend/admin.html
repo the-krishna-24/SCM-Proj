@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SCMXpert Lite | Admin Tools</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <style>
+  .filter-bar {
+  margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-bar input {
+  flex-grow: 1;
+  padding: 10px;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  color: #1e293b;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-bar input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.filter-bar input::placeholder {
+  color: #64748b;
+}
+
+.filter-bar button {
+  padding: 10px 16px;
+  border: none;
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  color: #ffffff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+}
+
+.filter-bar button:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.filter-bar button:active {
+  transform: translateY(0);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  background: transparent;
+  color: #1e293b;
+}
+
+th, td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+th {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+tbody tr:nth-child(even) {
+  background-color: rgba(241, 245, 249, 0.5);
+}
+
+tbody tr:hover {
+  background: rgba(99, 102, 241, 0.05);
+  transition: background-color 0.2s ease;
+}
+
+.action-buttons button {
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-right: 5px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+}
+
+.action-buttons button:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(99, 102, 241, 0.3);
+}
+
+.action-buttons button.delete-btn {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+}
+
+.action-buttons button.delete-btn:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(239, 68, 68, 0.3);
+}
+
+#userMessage {
+  text-align: center;
+  color: #64748b;
+  margin-top: 20px;
+  font-size: 0.95rem;
+  font-style: italic;
+}
+  
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Dashboard</h2>
+      <ul>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="account.html">My Account</a></li>
+        <li><a href="my_shipment.html">My Shipment</a></li>
+        <li><a href="New_shipment.html">New Shipment</a></li>
+        <li><a href="device.html">Device Data</a></li>
+        <li><a href="admin.html">Admin Tools</a></li>
+      </ul>
+      <a href="#" class="logout" id="logoutBtn">Logout</a>
+    </aside>
+
+    <main class="main-content">
+      <h1>Admin Tools - Manage Users</h1>
+      <div class="filter-bar">
+        <input type="text" id="filterEmail" placeholder="Filter by Email" />
+        <button onclick="filterUsers()">Filter</button>
+        <button onclick="loadUsers()">Show All</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Created At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          </tbody>
+      </table>
+      <p id="userMessage"></p>
+    </main>
+  </div>
+
+  <script>
+    const accessToken = localStorage.getItem("access_token");
+    const userRole = localStorage.getItem("role");
+    const userTableBody = document.querySelector("#admin-table tbody");
+    const userMessage = document.getElementById("userMessage");
+
+    if (!accessToken) {
+      window.location.href = "login.html";
+    }
+
+    // Redirect non-admin users from this page
+    if (userRole !== "admin") {
+      alert("Access Denied: Only administrators can access Admin Tools.");
+      window.location.href = "dashboard.html";
+    }
+
+    async function fetchUsers(emailFilter = "") {
+      const tbody = document.querySelector("table tbody");
+      tbody.innerHTML = ''; // Clear existing rows
+      userMessage.innerText = "Loading users...";
+
+      let url = "/admin/users"; // Default to get all users
+      if (emailFilter) {
+        url += `?email=${encodeURIComponent(emailFilter)}`;
+      }
+
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const users = data.users || [];
+
+          if (users.length === 0) {
+            userMessage.innerText = "No users found.";
+            return;
+          }
+
+          users.forEach(user => {
+            const createdAt = user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
+            const row = `<tr>
+              <td>${user.name || 'N/A'}</td>
+              <td>${user.email || 'N/A'}</td>
+              <td>${user.role || 'N/A'}</td>
+              <td>${createdAt}</td>
+              <td class="action-buttons">
+                <button onclick="changeUserRole('${user.email}', 'admin')">Make Admin</button>
+                <button onclick="changeUserRole('${user.email}', 'user')">Make User</button>
+                <button class="delete-btn" onclick="deleteUser('${user.email}')">Delete</button>
+              </td>
+            </tr>`;
+            tbody.insertAdjacentHTML("beforeend", row);
+          });
+          userMessage.innerText = ""; // Clear message
+        } else if (response.status === 401 || response.status === 403) {
+          alert("Session expired or unauthorized. Please log in again.");
+          localStorage.clear();
+          window.location.href = "login.html";
+        } else {
+          const errorData = await response.json();
+          userMessage.innerText = errorData.detail || "Failed to load users.";
+          userMessage.style.color = "tomato";
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        userMessage.innerText = "An error occurred while fetching users.";
+        userMessage.style.color = "tomato";
+      }
+    }
+
+    function loadUsers() {
+      document.getElementById("filterEmail").value = ""; // Clear filter input
+      fetchUsers();
+    }
+
+    function filterUsers() {
+      const emailFilter = document.getElementById("filterEmail").value.trim();
+      fetchUsers(emailFilter);
+    }
+
+    async function changeUserRole(email, newRole) {
+      if (!confirm(`Are you sure you want to change role of ${email} to ${newRole}?`)) {
+        return;
+      }
+      try {
+        const response = await fetch(`/admin/users/${encodeURIComponent(email)}/role`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+          },
+          body: JSON.stringify({ role: newRole })
+        });
+
+        if (response.ok) {
+          alert(`Role of ${email} changed to ${newRole} successfully.`);
+          loadUsers(); // Refresh the user list
+        } else if (response.status === 401 || response.status === 403) {
+          alert("Session expired or unauthorized. Please log in again.");
+          localStorage.clear();
+          window.location.href = "login.html";
+        } else {
+          const errorData = await response.json();
+          alert(errorData.detail || "Failed to change user role.");
+        }
+      } catch (error) {
+        console.error("Error changing user role:", error);
+        alert("An error occurred while changing user role.");
+      }
+    }
+
+    async function deleteUser(email) {
+      if (!confirm(`Are you sure you want to delete user ${email}? This action cannot be undone.`)) {
+        return;
+      }
+      try {
+        const response = await fetch(`/admin/users/${encodeURIComponent(email)}`, {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        if (response.ok) {
+          alert(`User ${email} deleted successfully.`);
+          loadUsers(); // Refresh the user list
+        } else if (response.status === 401 || response.status === 403) {
+          alert("Session expired or unauthorized. Please log in again.");
+          localStorage.clear();
+          window.location.href = "login.html";
+        } else {
+          const errorData = await response.json();
+          alert(errorData.detail || "Failed to delete user.");
+        }
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        alert("An error occurred while deleting user.");
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", loadUsers);
+
+    // Logout functionality
+    document.getElementById("logoutBtn").addEventListener("click", async function(e) {
+      e.preventDefault();
+      try {
+        const response = await fetch("/auth/logout", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        if (response.ok) {
+          localStorage.clear();
+          window.location.href = "login.html";
+        } else {
+          const data = await response.json();
+          alert(data.detail || "Logout failed. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error during logout:", error);
+        alert("An error occurred during logout.");
+      }
+    });
+  </script>
+</body>
+</html>

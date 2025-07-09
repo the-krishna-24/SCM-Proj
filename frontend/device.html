@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SCMXpert Lite | Device Data</title>
+  <link rel="stylesheet" href="dashboard.css" />
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      box-shadow: 0 0 12px rgba(255,255,255,0.08);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.03);
+      color: #1e293b;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+    }
+
+    th {
+      background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #ffffff;
+    }
+
+    tbody tr:nth-child(even) {
+      background-color: rgba(255,255,255,0.02);
+    }
+
+    tbody tr:hover {
+      background-color: rgba(255,255,255,0.08);
+    }
+
+    #deviceMessage {
+      text-align: center;
+      color: #1e293b;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <h2>Dashboard</h2>
+      <ul>
+        <li><a href="dashboard.html">Dashboard</a></li>
+        <li><a href="account.html">My Account</a></li>
+        <li><a href="my_shipment.html">My Shipment</a></li>
+        <li><a href="New_shipment.html">New Shipment</a></li>
+        <li><a href="device.html">Device Data</a></li>
+        <li><a href="admin.html">Admin Tools</a></li>
+      </ul>
+      <a href="#" class="logout" id="logoutBtn">Logout</a>
+    </aside>
+
+    <main class="main-content">
+      <h1>Device Data</h1>
+      <table>
+        <thead>
+          <tr>
+            <th>Device ID</th>
+            <th>Battery Level</th>
+            <th>First Sensor Temp</th>
+            <th>Route From</th>
+            <th>Route To</th>
+            <th>Timestamp</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="deviceMessage"></p>
+    </main>
+  </div>
+
+  <script>
+    const accessToken = localStorage.getItem("access_token");
+    const userRole = localStorage.getItem("role");
+
+    if (!accessToken) {
+      window.location.href = "login.html";
+    }
+
+    if (userRole !== "admin") {
+      alert("Access Denied: Only administrators can view Device Data.");
+      window.location.href = "dashboard.html";
+    }
+
+    async function fetchDeviceData() {
+      const tbody = document.querySelector("table tbody");
+      const messageElement = document.getElementById("deviceMessage");
+      tbody.innerHTML = "";
+      messageElement.innerText = "Loading device data...";
+
+      try {
+        const response = await fetch("/device/data", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const readings = data.data || [];
+
+          if (readings.length === 0) {
+            messageElement.innerText = "No device data available.";
+            return;
+          }
+
+          readings.forEach(reading => {
+            const row = `<tr>
+              <td>${reading.Device_ID || 'N/A'}</td>
+              <td>${reading.Battery_Level || 'N/A'}</td>
+              <td>${reading.First_Sensor_temperature || 'N/A'}</td>
+              <td>${reading.Route_From || 'N/A'}</td>
+              <td>${reading.Route_To || 'N/A'}</td>
+              <td>${reading.timestamp ? new Date(reading.timestamp).toLocaleString() : 'N/A'}</td>
+            </tr>`;
+            tbody.insertAdjacentHTML("beforeend", row);
+          });
+
+          messageElement.innerText = "";
+        } else {
+          const errorData = await response.json();
+          messageElement.innerText = errorData.detail || "Failed to load device data.";
+          messageElement.style.color = "tomato";
+        }
+      } catch (error) {
+        console.error("Error fetching device data:", error);
+        messageElement.innerText = "An error occurred while fetching device data.";
+        messageElement.style.color = "tomato";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", fetchDeviceData);
+
+    document.getElementById("logoutBtn").addEventListener("click", async function(e) {
+      e.preventDefault();
+      try {
+        const response = await fetch("/auth/logout", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`
+          }
+        });
+
+        if (response.ok) {
+          localStorage.clear();
+          window.location.href = "login.html";
+        } else {
+          const data = await response.json();
+          alert(data.detail || "Logout failed.");
+        }
+      } catch (error) {
+        console.error("Error during logout:", error);
+        alert("An error occurred during logout.");
+      }
+    });
+  </script>
+</body>
+</html>
