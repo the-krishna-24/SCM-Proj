@@ -5,6 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv # Import load_dotenv
 import os
+  
 
 # Import the APIRouter instances from your updated routes.py
 from backend.routes import auth_router, shipment_router, device_router, admin_router
