@@ -4,7 +4,7 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
+   
 DB_NAME = os.getenv("DB_NAME", "supplychain")
 
 client = MongoClient("mongodb+srv://leelakrishnar24:V5gDHCh8umpNBNZE@cluster0.mqnmljn.mongodb.net/")
